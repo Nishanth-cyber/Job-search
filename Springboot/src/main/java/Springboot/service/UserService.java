@@ -20,8 +20,17 @@ public class UserService {
         if (userRepository.existsByEmail(user.getEmail())) {
             throw new Exception("Email already exists");
         }
-        // Always set role to JOBSEEKER on signup (admin role is reserved and not selectable)
-        user.setRole("JOBSEEKER");
+        // Allow only JOBSEEKER or RECRUITER via signup. ADMIN cannot be assigned through signup.
+        String role = user.getRole();
+        if (role == null || role.isBlank()) {
+            role = "JOBSEEKER";
+        } else {
+            role = role.trim().toUpperCase();
+            if (!"JOBSEEKER".equals(role) && !"RECRUITER".equals(role)) {
+                role = "JOBSEEKER";
+            }
+        }
+        user.setRole(role);
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         return userRepository.save(user);
     }
@@ -54,7 +63,7 @@ public class UserService {
             throw new Exception("Invalid password");
         }
 
-        // Non-admin users are always JOBSEEKER
+        // Preserve existing non-admin roles; default to JOBSEEKER if missing
         if (user.getRole() == null) user.setRole("JOBSEEKER");
         return user;
     }

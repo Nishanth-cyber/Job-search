@@ -23,22 +23,32 @@ export default function Navbar() {
     setUser(null);
   };
 
+  const isRecruiter = !!user && user.role === 'RECRUITER';
+  const isAdmin = !!user && user.role === 'ADMIN';
+
   return (
     <>
       <nav className="navbar">
-        <div className="logo">Job_Portal</div>
+        <div className="logo">JOBSAGA</div>
         <div>
           <Link to="/">Home</Link>
+          <Link to="/challenges">Challenges</Link>
           {/* Role-based primary nav links */}
           {(!user || user.role === 'JOBSEEKER') && (
             <Link to="/jobs">Jobs</Link>
           )}
           {user ? (
             <>
-              {user.role === 'ADMIN' && (
+              {isRecruiter && (
                 <>
                   <Link to="/admin/my-jobs">My Jobs</Link>
                   <Link to="/admin/post-job">Post Job</Link>
+                  <Link to="/company/post-challenge">Post Challenge</Link>
+                </>
+              )}
+              {isAdmin && (
+                <>
+                  <Link to="/admin/dashboard">Admin Dashboard</Link>
                 </>
               )}
               {user.role === 'JOBSEEKER' && (

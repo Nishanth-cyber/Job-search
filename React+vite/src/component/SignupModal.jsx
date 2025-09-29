@@ -44,7 +44,7 @@ export default function SignupModal({ isOpen, onClose, closeOnOverlay = true, cl
           <label>Role</label>
           <select value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}>
             <option value="JOBSEEKER">Jobseeker</option>
-            <option value="ADMIN">Admin (Recruiter)</option>
+            <option value="RECRUITER">Recruiter (Company)</option>
           </select>
         </div>
         <div className="modal-footer">

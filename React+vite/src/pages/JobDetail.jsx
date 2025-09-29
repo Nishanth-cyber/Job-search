@@ -53,7 +53,7 @@ export default function JobDetail() {
           <strong>Required skills</strong>
           <div style={{ marginTop: 8, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {job.requiredSkills.map(s => (
-              <span key={s} style={{ background: '#0b1020', border: '1px solid #334155', padding: '4px 8px', borderRadius: 999 }}>{s}</span>
+              <span key={s} style={{ background: '#0b1020', border: '1px solid #334155', padding: '4px 8px', borderRadius: 999, color: '#ffffff' }}>{s}</span>
             ))}
           </div>
         </div>

@@ -48,7 +48,7 @@ public class AdminSeeder implements ApplicationRunner {
     public void run(ApplicationArguments args) throws Exception {
         if (!seedEnabled) return;
         if (adminEmail == null || adminEmail.isBlank() || adminPassword == null || adminPassword.isBlank()) {
-            return; // misconfigured; skip silently
+            return; 
         }
 
         UserModel admin = userRepository.findByEmail(adminEmail).orElse(null);
@@ -59,7 +59,6 @@ public class AdminSeeder implements ApplicationRunner {
             admin.setUsername(adminUsername);
             admin.setRole("ADMIN");
             admin.setPassword(encoder.encode(adminPassword));
-            // Optional company fields
             admin.setCompanyName(companyName);
             admin.setCompanyDescription(companyDescription);
             admin.setCompanyWebsite(companyWebsite);

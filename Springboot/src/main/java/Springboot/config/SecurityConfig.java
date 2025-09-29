@@ -21,6 +21,7 @@ import org.springframework.security.web.access.AccessDeniedHandler;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+// removed custom AuthorizationDecision helper
 
 @Configuration
 public class SecurityConfig {
@@ -40,13 +41,21 @@ public class SecurityConfig {
                         .requestMatchers("/auth/**").permitAll()
                         // Public reads for jobs
                         .requestMatchers(HttpMethod.GET, "/jobs", "/jobs/search", "/jobs/*", "/jobs/**").permitAll()
+                        // Public reads for challenges
+                        .requestMatchers(HttpMethod.GET, "/challenges", "/challenges/*", "/challenges/**").permitAll()
                         // Allow jobseekers to submit answers for evaluation
                         .requestMatchers(HttpMethod.POST, "/jobs/*/evaluate-answers").hasRole("JOBSEEKER")
-                        // Admin writes for jobs
-                        .requestMatchers(HttpMethod.POST, "/jobs", "/jobs/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/jobs/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PATCH, "/jobs/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/jobs/**").hasRole("ADMIN")
+                        // Job writes: only RECRUITER role
+                        .requestMatchers(HttpMethod.POST, "/jobs", "/jobs/**").hasRole("RECRUITER")
+                        .requestMatchers(HttpMethod.PUT, "/jobs/**").hasRole("RECRUITER")
+                        .requestMatchers(HttpMethod.PATCH, "/jobs/**").hasRole("RECRUITER")
+                        .requestMatchers(HttpMethod.DELETE, "/jobs/**").hasRole("RECRUITER")
+                        // Challenges: only RECRUITER can post; jobseekers can submit solutions
+                        .requestMatchers(HttpMethod.POST, "/challenges").hasRole("RECRUITER")
+                        .requestMatchers(HttpMethod.GET, "/challenges/*/submissions").hasRole("RECRUITER")
+                        // Admin-only dashboard endpoints
+                        .requestMatchers("/admin/dashboard/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/challenges/*/submit").hasRole("JOBSEEKER")
                         .requestMatchers("/applications/me").hasRole("JOBSEEKER")
                         .requestMatchers("/applications/**").authenticated()
                         .anyRequest().authenticated()
@@ -58,6 +67,8 @@ public class SecurityConfig {
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
+
+    // no custom helpers
 
     @Bean
     public WebMvcConfigurer corsConfigurer() {

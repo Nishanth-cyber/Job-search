@@ -41,7 +41,6 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<?> handleRuntime(RuntimeException ex) {
-        // Let controllers override status when they explicitly set 401; otherwise default 400
         Map<String, Object> body = new HashMap<>();
         body.put("error", ex.getMessage());
         return ResponseEntity.badRequest().body(body);

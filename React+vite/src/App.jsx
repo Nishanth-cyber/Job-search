@@ -12,6 +12,11 @@ import MyJobs from "./pages/MyJobs";
 import MyApplications from "./pages/MyApplications";
 import AdminJobApplications from "./pages/AdminJobApplications";
 import ResumeTest from "./pages/ResumeTest";
+import Challenges from "./pages/Challenges";
+import ChallengeDetail from "./pages/ChallengeDetail";
+import CompanyPostChallenge from "./pages/CompanyPostChallenge";
+import AdminDashboard from "./pages/AdminDashboard";
+import ChallengeSubmissions from "./pages/ChallengeSubmissions";
 
 function App() {
   return (
@@ -29,23 +34,44 @@ function App() {
               </ProtectedRoute>
             } />
             <Route path="/admin/post-job" element={
-              <ProtectedRoute allowedRoles={["ADMIN"]}>
+              <ProtectedRoute allowedRoles={["RECRUITER"]}>
                 <AdminPostJob />
               </ProtectedRoute>
             } />
             <Route path="/admin/my-jobs" element={
-              <ProtectedRoute allowedRoles={["ADMIN"]}>
+              <ProtectedRoute allowedRoles={["RECRUITER"]}>
                 <MyJobs />
               </ProtectedRoute>
             } />
             <Route path="/admin/jobs/:id/applications" element={
-              <ProtectedRoute allowedRoles={["ADMIN"]}>
+              <ProtectedRoute allowedRoles={["RECRUITER"]}>
                 <AdminJobApplications />
               </ProtectedRoute>
             } />
             <Route path="/me/applications" element={
               <ProtectedRoute allowedRoles={["JOBSEEKER"]}>
                 <MyApplications />
+              </ProtectedRoute>
+            } />
+
+            {/* Challenges feature */}
+            <Route path="/challenges" element={<Challenges />} />
+            <Route path="/challenges/:id" element={<ChallengeDetail />} />
+            <Route path="/company/challenges/:id/submissions" element={
+              <ProtectedRoute allowedRoles={["RECRUITER"]}>
+                <ChallengeSubmissions />
+              </ProtectedRoute>
+            } />
+            <Route path="/company/post-challenge" element={
+              <ProtectedRoute allowedRoles={["RECRUITER"]}>
+                <CompanyPostChallenge />
+              </ProtectedRoute>
+            } />
+
+            {/* Admin Dashboard */}
+            <Route path="/admin/dashboard" element={
+              <ProtectedRoute allowedRoles={["ADMIN"]}>
+                <AdminDashboard />
               </ProtectedRoute>
             } />
 

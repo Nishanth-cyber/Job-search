@@ -25,14 +25,14 @@ public class JobService {
     private static final Logger log = LoggerFactory.getLogger(JobService.class);
 
     public JobModel createJob(JobModel job, String adminId) {
-        // Verify admin user
-        Optional<UserModel> admin = userRepository.findById(adminId);
-        if (admin.isEmpty() || !"ADMIN".equals(admin.get().getRole())) {
-            throw new RuntimeException("Only admins can create jobs");
+        // Verify recruiter user
+        Optional<UserModel> recruiter = userRepository.findById(adminId);
+        if (recruiter.isEmpty() || !"RECRUITER".equals(recruiter.get().getRole())) {
+            throw new RuntimeException("Only recruiters can create jobs");
         }
 
-        // Set admin details
-        UserModel adminUser = admin.get();
+        // Set recruiter details
+        UserModel adminUser = recruiter.get();
         job.setPostedBy(adminId);
         // Determine companyName (must be non-blank per validation)
         String resolvedCompanyName = firstNonBlank(
