@@ -17,7 +17,6 @@ import ChallengeDetail from "./pages/ChallengeDetail";
 import CompanyPostChallenge from "./pages/CompanyPostChallenge";
 import AdminDashboard from "./pages/AdminDashboard";
 import ChallengeSubmissions from "./pages/ChallengeSubmissions";
-import VoiceInterviewPage from "./pages/VoiceInterviewPage";
 import UploadedImage from "./pages/UploadedImage";
 
 function App() {
@@ -29,16 +28,19 @@ function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/uploaded" element={<UploadedImage />} />
-            <Route path="/jobs" element={<Jobs />} />
-            <Route path="/jobs/:id" element={<JobDetail />} />
+            <Route path="/jobs" element={
+              <ProtectedRoute allowedRoles={["JOBSEEKER"]}>
+                <Jobs />
+              </ProtectedRoute>
+            } />
+            <Route path="/jobs/:id" element={
+              <ProtectedRoute allowedRoles={["JOBSEEKER"]}>
+                <JobDetail />
+              </ProtectedRoute>
+            } />
             <Route path="/jobs/:id/test" element={
               <ProtectedRoute allowedRoles={["JOBSEEKER"]}>
                 <ResumeTest />
-              </ProtectedRoute>
-            } />
-            <Route path="/voice-interview/:jobId" element={
-              <ProtectedRoute allowedRoles={["JOBSEEKER"]}>
-                <VoiceInterviewPage />
               </ProtectedRoute>
             } />
             <Route path="/admin/post-job" element={
@@ -63,8 +65,16 @@ function App() {
             } />
 
             {/* Challenges feature */}
-            <Route path="/challenges" element={<Challenges />} />
-            <Route path="/challenges/:id" element={<ChallengeDetail />} />
+            <Route path="/challenges" element={
+              <ProtectedRoute allowedRoles={["JOBSEEKER", "COMPANY", "RECRUITER"]}>
+                <Challenges />
+              </ProtectedRoute>
+            } />
+            <Route path="/challenges/:id" element={
+              <ProtectedRoute allowedRoles={["JOBSEEKER", "COMPANY", "RECRUITER"]}>
+                <ChallengeDetail />
+              </ProtectedRoute>
+            } />
             <Route path="/company/challenges/:id/submissions" element={
               <ProtectedRoute allowedRoles={["RECRUITER", "COMPANY"]}>
                 <ChallengeSubmissions />

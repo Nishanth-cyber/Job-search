@@ -39,7 +39,9 @@ export default function Challenges() {
     <div className="fade-in">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1 className="title-grad" style={{ marginBottom: 6 }}>Company Challenges</h1>
-        <Link className="btn btn-primary" to="/company/post-challenge">Post Challenge</Link>
+        {user && user.role === 'COMPANY' && (
+          <Link className="btn btn-primary" to="/company/post-challenge">Post Challenge</Link>
+        )}
       </div>
       <p className="muted" style={{ marginTop: 0, marginBottom: 16 }}>Solve real-world problems from companies and showcase your skills.</p>
       <form onSubmit={search} className="row" style={{ gridTemplateColumns: '1fr auto auto', alignItems: 'center', gap: 10, marginBottom: 18 }}>

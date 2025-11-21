@@ -161,16 +161,33 @@ public class JobApplicationService {
                 throw new RuntimeException("Application is not ready for test. Current status: " + application.getStatus());
             }
             
+            // Get job details to check threshold
+            JobModel job = jobRepository.findById(jobId)
+                .orElseThrow(() -> new RuntimeException("Job not found"));
+                
             // Update application with test results
             application.setTestScore(testScore);
-            application.setPassedTest(true); // For now, always pass if test is taken
-            application.setStatus("PENDING_REVIEW");
+            
+            // Check if the test score meets or exceeds the threshold
+            Integer threshold = job.getMinN8nScoreForTest();
+            boolean meetsThreshold = (threshold == null) || (testScore != null && testScore >= threshold);
+            
+            // Set status based on threshold check
+            if (meetsThreshold) {
+                application.setPassedTest(true);
+                application.setStatus("PENDING_REVIEW");
+            } else {
+                application.setPassedTest(false);
+                application.setStatus("TEST_BELOW_THRESHOLD");
+            }
             
             // Save updated application
             JobApplicationModel savedApplication = jobApplicationRepository.save(application);
             
-            // Increment job application count (only when test is completed)
-            jobService.incrementApplicationCount(jobId);
+            // Only increment application count if the test was passed
+            if (meetsThreshold) {
+                jobService.incrementApplicationCount(jobId);
+            }
             
             return savedApplication;
 

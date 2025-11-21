@@ -1,5 +1,5 @@
-import { useState } from "react";
-import api from "../api";
+import { useState, useEffect } from "react";
+import api, { fetchMyProfile } from "../api";
 
 export default function AdminPostJob() {
   const [form, setForm] = useState({
@@ -16,9 +16,34 @@ export default function AdminPostJob() {
     requirements: "",
     benefits: "",
     applicationDeadline: "",
+    minN8nScoreForTest: "70",
   });
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
+  const [userProfile, setUserProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const profile = await fetchMyProfile();
+        setUserProfile(profile);
+        // If user has a company name, pre-fill it in the form
+        if (profile?.companyName) {
+          setForm(prev => ({
+            ...prev,
+            companyName: profile.companyName
+          }));
+        }
+      } catch (error) {
+        console.error('Failed to fetch user profile:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProfile();
+  }, []);
 
   function validate(values) {
     const e = {};
@@ -27,6 +52,8 @@ export default function AdminPostJob() {
     if (!values.location.trim()) e.location = "Location is required";
     if (!String(values.requiredSkills).trim()) e.requiredSkills = "Required skills are required";
     if (!String(values.requirements).trim()) e.requirements = "Requirements are required";
+    const thr = Number(values.minN8nScoreForTest);
+    if (Number.isNaN(thr) || thr < 0 || thr > 100) e.minN8nScoreForTest = "Threshold must be between 0 and 100";
     return e;
   }
 
@@ -54,6 +81,7 @@ export default function AdminPostJob() {
         // companyName is resolved on backend from recruiter profile
         salaryMin: form.salaryMin ? Number(form.salaryMin) : 0,
         salaryMax: form.salaryMax ? Number(form.salaryMax) : 0,
+        minN8nScoreForTest: form.minN8nScoreForTest === "" ? null : Number(form.minN8nScoreForTest),
         requiredSkills: String(form.requiredSkills)
           .split(",")
           .map((s) => s.trim())
@@ -103,6 +131,14 @@ export default function AdminPostJob() {
     }
   }
 
+  if (loading) {
+    return (
+      <div className="fade-in" style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}>
+        <div className="loader"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="fade-in">
       <h1 className="title-grad" style={{ marginBottom: 12 }}>Post a Job</h1>
@@ -132,11 +168,29 @@ export default function AdminPostJob() {
           </div>
 
           <div className="row cols-2">
-            <div className="field">
-              <label>Company Name</label>
-              <input name="companyName" placeholder="e.g., Demo Company" value={form.companyName} onChange={(e) => setForm({ ...form, companyName: e.target.value })} required />
-              {errors.companyName && <small className="text-error">{errors.companyName}</small>}
-            </div>
+            {!userProfile?.companyName && (
+              <div className="field">
+                <label>Company Name</label>
+                <input 
+                  name="companyName" 
+                  placeholder="e.g., Demo Company" 
+                  value={form.companyName || ''} 
+                  onChange={(e) => setForm({ ...form, companyName: e.target.value })} 
+                  required 
+                />
+                {errors.companyName && <small className="text-error">{errors.companyName}</small>}
+              </div>
+            )}
+            {userProfile?.companyName && (
+              <div className="field">
+                <label>Company Name</label>
+                <div className="form-control" style={{ padding: '0.5rem 0' }}>
+                  <strong>{userProfile.companyName}</strong>
+                  <input type="hidden" name="companyName" value={userProfile.companyName} />
+                </div>
+                <small className="text-muted">Your company name from profile</small>
+              </div>
+            )}
             <div className="field">
               <label>Currency</label>
               <input placeholder="e.g., USD, INR" value={form.salaryCurrency} onChange={(e) => setForm({ ...form, salaryCurrency: e.target.value })} />
@@ -164,6 +218,19 @@ export default function AdminPostJob() {
             <div className="field">
               <label>Application Deadline (optional)</label>
               <input type="datetime-local" value={form.applicationDeadline} onChange={(e) => setForm({ ...form, applicationDeadline: e.target.value })} />
+            </div>
+            <div className="field">
+              <label>Threshold score to accept application (0-100)</label>
+              <input
+                type="number"
+                min={0}
+                max={100}
+                placeholder="e.g., 70"
+                value={form.minN8nScoreForTest}
+                onChange={(e) => setForm({ ...form, minN8nScoreForTest: e.target.value })}
+              />
+              <small>Applicants need to score at least this in evaluation to be auto-accepted.</small>
+              {errors.minN8nScoreForTest && <small className="text-error">{errors.minN8nScoreForTest}</small>}
             </div>
           </div>
 

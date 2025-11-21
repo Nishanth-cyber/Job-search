@@ -67,4 +67,17 @@ public class UserService {
         if (user.getRole() == null) user.setRole("JOBSEEKER");
         return user;
     }
+
+    public void changePassword(String email, String oldPassword, String newPassword) throws Exception {
+        UserModel user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new Exception("User not found"));
+        if (user.getPassword() == null || !passwordEncoder.matches(oldPassword, user.getPassword())) {
+            throw new Exception("Current password is incorrect");
+        }
+        if (newPassword == null || newPassword.length() < 6) {
+            throw new Exception("New password must be at least 6 characters");
+        }
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+    }
 }

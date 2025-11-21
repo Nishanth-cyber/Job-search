@@ -20,6 +20,8 @@ export default function ProfileModal({ isOpen, onClose }) {
   const normalizedRole = String(user?.role || form.role || '').toUpperCase();
   const isRecruiter = (normalizedRole === 'RECRUITER' || normalizedRole === 'COMPANY')
     || !!form.companyId || !!form.companyName || !!user?.companyId || !!user?.companyName;
+  const [pwd, setPwd] = useState({ currentPassword: '', newPassword: '', confirm: '' });
+  const [changingPwd, setChangingPwd] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -265,6 +267,48 @@ export default function ProfileModal({ isOpen, onClose }) {
           <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? "Saving..." : "Save Changes"}</button>
         </div>
       </form>
+
+      {!isRecruiter && (
+        <div className="card" style={{ marginTop: 16, padding: 16 }}>
+          <h4 style={{ marginTop: 0 }}>Change Password</h4>
+          <div className="row cols-3">
+            <div className="field">
+              <label>Current Password</label>
+              <input type="password" value={pwd.currentPassword} onChange={(e) => setPwd({ ...pwd, currentPassword: e.target.value })} />
+            </div>
+            <div className="field">
+              <label>New Password</label>
+              <input type="password" value={pwd.newPassword} onChange={(e) => setPwd({ ...pwd, newPassword: e.target.value })} />
+            </div>
+            <div className="field">
+              <label>Confirm New Password</label>
+              <input type="password" value={pwd.confirm} onChange={(e) => setPwd({ ...pwd, confirm: e.target.value })} />
+            </div>
+          </div>
+          <div>
+            <button
+              className="btn btn-secondary"
+              disabled={changingPwd}
+              onClick={async () => {
+                if (!pwd.currentPassword || !pwd.newPassword) { alert('Please fill all password fields'); return; }
+                if (pwd.newPassword !== pwd.confirm) { alert('Passwords do not match'); return; }
+                setChangingPwd(true);
+                try {
+                  await api.post('/auth/change-password', { currentPassword: pwd.currentPassword, newPassword: pwd.newPassword });
+                  alert('Password changed');
+                  setPwd({ currentPassword: '', newPassword: '', confirm: '' });
+                } catch (e) {
+                  alert(e.response?.data || 'Failed to change password');
+                } finally {
+                  setChangingPwd(false);
+                }
+              }}
+            >
+              {changingPwd ? 'Changing...' : 'Change Password'}
+            </button>
+          </div>
+        </div>
+      )}
     </Modal>
   );
 }

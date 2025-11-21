@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../api";
+import N8NAnalysisModal from "../component/N8NAnalysisModal";
 
 export default function JobDetail() {
   const { id } = useParams();
@@ -10,6 +11,7 @@ export default function JobDetail() {
   const [coverLetter, setCoverLetter] = useState("");
   const [resume, setResume] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showN8NModal, setShowN8NModal] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -28,10 +30,9 @@ export default function JobDetail() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      // Persist cover letter for the test page
-      if (coverLetter) sessionStorage.setItem(`coverLetter:${id}`, coverLetter);
-      // We cannot carry the File object reliably; user can re-select on the test page
-      navigate(`/jobs/${id}/test`, { state: { coverLetter } });
+      // No cover letter flow required
+      // Navigate to typing-based test page
+      navigate(`/jobs/${id}/test`);
     } finally {
       setSubmitting(false);
     }
@@ -67,21 +68,26 @@ export default function JobDetail() {
 
       <hr style={{ borderColor: '#334155', margin: '20px 0' }} />
 
-      <h3>Apply for this job</h3>
+      <h3>Start your skill test</h3>
       <form className="form" onSubmit={startTest}>
-        <div className="field">
-          <label>Cover letter (optional)</label>
-          <textarea rows={4} value={coverLetter} onChange={e => setCoverLetter(e.target.value)} />
-        </div>
-        <div className="field">
-          <label>Resume (optional here). You can attach it on the next step.</label>
-          <input type="file" onChange={e => setResume(e.target.files?.[0] || null)} disabled />
-          <small>Resume upload is available on the next page.</small>
-        </div>
         <div style={{ marginTop: 10 }}>
           <button className="btn btn-primary" type="submit" disabled={submitting}>{submitting ? 'Opening test...' : 'Start Resume Test'}</button>
         </div>
       </form>
+
+      <hr style={{ borderColor: '#334155', margin: '20px 0' }} />
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <button className="btn btn-secondary" onClick={() => setShowN8NModal(true)}>
+          Resume Match
+        </button>
+      </div>
+
+      <N8NAnalysisModal
+        jobId={id}
+        isOpen={showN8NModal}
+        onClose={() => setShowN8NModal(false)}
+        onContinue={() => setShowN8NModal(false)}
+      />
     </div>
   );
 }

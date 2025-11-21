@@ -4,6 +4,8 @@ import Springboot.model.UserModel;
 import Springboot.service.UserService;
 import Springboot.security.JwtUtil;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.HttpHeaders;
@@ -76,6 +78,24 @@ public class UserController {
         public AuthResponse(UserModel user, String token) {
             this.user = user;
             this.token = token;
+        }
+    }
+
+    public static class ChangePasswordRequest {
+        public String currentPassword;
+        public String newPassword;
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(@RequestBody ChangePasswordRequest req) {
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            String email = auth != null ? (String) auth.getPrincipal() : null;
+            if (email == null) return ResponseEntity.status(401).body("Unauthorized");
+            userService.changePassword(email, req.currentPassword, req.newPassword);
+            return ResponseEntity.ok("Password changed");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 

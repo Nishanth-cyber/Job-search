@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import api from '../api';
+import api, { analyzeResumeWebhook, generateInterviewQuestionsWebhook, fetchMyProfile, downloadMyResume } from '../api';
 import Modal from './Modal';
 
 export default function N8NAnalysisModal({ jobId, isOpen, onClose, onContinue }) {
@@ -10,12 +10,14 @@ export default function N8NAnalysisModal({ jobId, isOpen, onClose, onContinue })
   const [selectedFileName, setSelectedFileName] = useState("");
   const [resumeFile, setResumeFile] = useState(null);
   const [coverLetter, setCoverLetter] = useState("");
+  const [usingProfileResume, setUsingProfileResume] = useState(false);
 
   useEffect(() => {
     if (isOpen && jobId) {
       // Check for existing application
       checkApplicationStatus();
       loadJob();
+      loadProfileResumeIfAny();
     }
   }, [isOpen, jobId]);
 
@@ -44,6 +46,24 @@ export default function N8NAnalysisModal({ jobId, isOpen, onClose, onContinue })
     }
   }
 
+  async function loadProfileResumeIfAny() {
+    try {
+      const me = await fetchMyProfile();
+      if (me?.resumeFileId) {
+        const blob = await downloadMyResume();
+        const fileName = me.resumeFileName || 'resume.pdf';
+        const file = new File([blob], fileName, { type: blob.type || 'application/octet-stream' });
+        setResumeFile(file);
+        setSelectedFileName(file.name);
+        setUsingProfileResume(true);
+      } else {
+        setUsingProfileResume(false);
+      }
+    } catch (_) {
+      // ignore
+    }
+  }
+
   function getCurrentUserId() {
     // This should come from your auth context
     return localStorage.getItem('userId') || '';
@@ -55,62 +75,57 @@ export default function N8NAnalysisModal({ jobId, isOpen, onClose, onContinue })
     setError(null);
 
     try {
-      const formData = new FormData();
-      formData.append('jobId', jobId);
-      const fileToUse = resumeFile || e.target.resume.files[0];
+      const fileToUse = resumeFile || e.target.resume?.files?.[0];
       if (!fileToUse) throw new Error('Please select a resume');
-      formData.append('resume', fileToUse);
 
-      // Preview only (no persistence)
-      const res = await api.post('/applications/preview', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      setAnalysis(res.data);
+      // Build job description from loaded job
+      const jobdescription = job?.description || '';
+      const result = await analyzeResumeWebhook(fileToUse, jobdescription);
+
+      // Normalize score to 0-100 scale
+      const normalizeScore = (s) => {
+        if (typeof s !== 'number' || isNaN(s)) return null;
+        if (s <= 1) return Math.round(s * 100);      // e.g., 0.82 => 82
+        if (s <= 10) return Math.round(s * 10);      // e.g., 8 => 80
+        if (s <= 100) return Math.round(s);          // e.g., 80 => 80
+        return Math.min(100, Math.round(s));
+      };
+
+      // Map webhook result to modal UI structure
+      const mapped = {
+        status: 'N8N_READY',
+        n8nScore: normalizeScore(result.score),
+        n8nSummary: result.summary || '',
+        n8nKeyStrengths: Array.isArray(result.key_strengths) ? result.key_strengths : [],
+        n8nMissingSkills: Array.isArray(result.missing_skills) ? result.missing_skills : [],
+        n8nSuggestions: Array.isArray(result.suggestions) ? result.suggestions.join('\n') : (result.suggestions || ''),
+        eligible: true,
+      };
+      setAnalysis(mapped);
     } catch (e) {
-      setError(e.response?.data?.error || 'Failed to submit resume for analysis');
+      setError(e.response?.data?.error || e.message || 'Failed to submit resume for analysis');
     } finally {
       setLoading(false);
     }
   }
 
   function handleContinue() {
-    // If we already have a persisted application (status present), continue immediately
-    if (analysis && analysis.status === 'READY_FOR_TEST') {
-      onContinue?.(analysis);
-      onClose();
-      return;
-    }
-
-    // From preview -> create application, then continue
     (async () => {
       try {
-        if (!resumeFile) {
-          throw new Error('Please select your resume again.');
-        }
-        const fd = new FormData();
-        fd.append('jobId', jobId);
-        fd.append('resume', resumeFile);
-        if (coverLetter) fd.append('coverLetter', coverLetter);
-        const res = await api.post('/applications/initial', fd, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
-        const app = res.data;
-        setAnalysis(app);
-        if (app.status !== 'READY_FOR_TEST') {
-          // Not eligible or error; just update view
-          return;
-        }
-        onContinue?.(app);
+        if (!resumeFile) throw new Error('Resume not available.');
+        const jobdescription = job?.description || '';
+        const q = await generateInterviewQuestionsWebhook(resumeFile, jobdescription);
+        const questions = Array.isArray(q?.questions) ? q.questions : [];
+        onContinue?.({ ...analysis, questions });
         onClose();
       } catch (e) {
-        setError(e.response?.data?.error || e.message || 'Failed to proceed');
+        setError(e.response?.data?.error || e.message || 'Failed to generate questions');
       }
     })();
   }
 
   const belowThreshold = (() => {
     if (!analysis) return false;
-    if (analysis.status === 'N8N_BELOW_THRESHOLD') return true;
     if (job?.minN8nScoreForTest != null && analysis.n8nScore != null) {
       return analysis.n8nScore < job.minN8nScoreForTest;
     }
@@ -119,8 +134,7 @@ export default function N8NAnalysisModal({ jobId, isOpen, onClose, onContinue })
 
   const canContinue = (() => {
     if (!analysis) return false;
-    if (analysis.status === 'READY_FOR_TEST') return true;
-    if (analysis.eligible === true) return true; // from preview endpoint
+    if (analysis.eligible === true) return true;
     return false;
   })();
 
@@ -134,8 +148,8 @@ export default function N8NAnalysisModal({ jobId, isOpen, onClose, onContinue })
 
           {job && (
             <div style={{
-              background: '#f8fafc', padding: 16, borderRadius: 8, marginBottom: 16,
-              border: '1px solid #e5e7eb'
+              background: '#0b1020', padding: 16, borderRadius: 8, marginBottom: 16,
+              border: '1px solid #334155'
             }}>
               <h4 style={{ marginTop: 0 }}>{job.title || 'Job Details'}</h4>
               <div style={{ marginBottom: 8 }}>
@@ -162,20 +176,27 @@ export default function N8NAnalysisModal({ jobId, isOpen, onClose, onContinue })
           <form className="form" onSubmit={submitForAnalysis}>
             <div className="field">
               <label>Resume *</label>
-              <input 
-                type="file" 
-                name="resume" 
-                accept=".pdf,.doc,.docx" 
-                required 
-                onChange={(e) => {
-                  const f = e.target.files?.[0] || null;
-                  setResumeFile(f);
-                  setSelectedFileName(f?.name || "");
-                }}
-              />
+              {!usingProfileResume && (
+                <input 
+                  type="file" 
+                  name="resume" 
+                  accept=".pdf,.doc,.docx" 
+                  required={!resumeFile}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0] || null;
+                    setResumeFile(f);
+                    setSelectedFileName(f?.name || "");
+                    setUsingProfileResume(false);
+                  }}
+                />
+              )}
               {selectedFileName && (
                 <div style={{ marginTop: 6, fontSize: '0.9em', color: '#6b7280' }}>
-                  Selected: {selectedFileName}
+                  {usingProfileResume ? (
+                    <span>Using profile resume: {selectedFileName}</span>
+                  ) : (
+                    <span>Selected: {selectedFileName}</span>
+                  )}
                 </div>
               )}
             </div>
@@ -250,16 +271,16 @@ export default function N8NAnalysisModal({ jobId, isOpen, onClose, onContinue })
                   </div>
                 )}
 
-                {analysis.n8nSummary && (
+                {false && analysis.n8nSummary && (
                   <div style={{ marginBottom: 16 }}>
                     <strong>Summary:</strong>
-                    <div style={{ background: '#f8fafc', padding: 12, borderRadius: 8, marginTop: 8, whiteSpace: 'pre-wrap' }}>
+                    <div style={{ background: '#0b1020', border: '1px solid #334155', padding: 12, borderRadius: 8, marginTop: 8, whiteSpace: 'pre-wrap' }}>
                       {analysis.n8nSummary}
                     </div>
                   </div>
                 )}
 
-                {Array.isArray(analysis.n8nKeyStrengths) && analysis.n8nKeyStrengths.length > 0 && (
+                {false && Array.isArray(analysis.n8nKeyStrengths) && analysis.n8nKeyStrengths.length > 0 && (
                   <div style={{ marginBottom: 16 }}>
                     <strong>Key strengths:</strong>
                     <ul style={{ marginTop: 8 }}>
@@ -281,11 +302,12 @@ export default function N8NAnalysisModal({ jobId, isOpen, onClose, onContinue })
                   </div>
                 )}
 
-                {analysis.n8nSuggestions && (
+                {false && analysis.n8nSuggestions && (
                   <div style={{ marginBottom: 16 }}>
                     <strong>Suggestions:</strong>
                     <div style={{ 
-                      background: '#f8fafc', 
+                      background: '#0b1020', 
+                      border: '1px solid #334155',
                       padding: 12, 
                       borderRadius: 8,
                       marginTop: 8,
@@ -309,9 +331,6 @@ export default function N8NAnalysisModal({ jobId, isOpen, onClose, onContinue })
               <div className="modal-footer">
                 <button className="btn btn-secondary" onClick={onClose}>
                   Close
-                </button>
-                <button className="btn btn-primary" onClick={handleContinue} disabled={belowThreshold || !canContinue}>
-                  {belowThreshold || !canContinue ? 'Not Eligible for Skill Test' : 'Continue to Skill Test'}
                 </button>
               </div>
             </div>
