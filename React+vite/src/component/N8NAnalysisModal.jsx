@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api, { analyzeResumeWebhook, generateInterviewQuestionsWebhook, fetchMyProfile, downloadMyResume } from '../api';
 import Modal from './Modal';
 
 export default function N8NAnalysisModal({ jobId, isOpen, onClose, onContinue }) {
+  const navigate = useNavigate();
+  const [showResult, setShowResult] = useState(false);
   const [analysis, setAnalysis] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -137,6 +140,12 @@ export default function N8NAnalysisModal({ jobId, isOpen, onClose, onContinue })
     if (analysis.eligible === true) return true;
     return false;
   })();
+
+  const handleAcknowledge = () => {
+    setShowResult(false);
+    onClose();
+    navigate('/my-applications');
+  };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Resume Analysis" size="lg">
@@ -319,20 +328,40 @@ export default function N8NAnalysisModal({ jobId, isOpen, onClose, onContinue })
                 )}
               </div>
 
-              {belowThreshold && (
-                <div style={{
-                  background: '#FEF2F2', color: '#991B1B', border: '1px solid #FCA5A5',
-                  padding: 12, borderRadius: 8, marginBottom: 16
-                }}>
-                  Your score {analysis.n8nScore} is below the company threshold {job?.minN8nScoreForTest ?? 70}. You cannot take the skill test for this job.
+              {belowThreshold ? (
+                <>
+                  <div style={{
+                    background: '#FEF2F2', 
+                    color: '#991B1B', 
+                    border: '1px solid #FCA5A5',
+                    padding: '16px', 
+                    borderRadius: '8px', 
+                    marginBottom: '24px',
+                    textAlign: 'center'
+                  }}>
+                    <h4 style={{ marginTop: 0, color: '#991B1B' }}>Evaluation Complete</h4>
+                    <p>Your resume score: <strong>{analysis.n8nScore}/100</strong></p>
+                    <p>Required score: <strong>{job?.minN8nScoreForTest ?? 70}/100</strong></p>
+                    <p style={{ marginBottom: 0 }}>Your application has been saved. You can view its status in My Applications.</p>
+                  </div>
+                  
+                  <div className="modal-footer" style={{ justifyContent: 'center' }}>
+                    <button 
+                      className="btn btn-primary" 
+                      onClick={handleAcknowledge}
+                      style={{ minWidth: '120px' }}
+                    >
+                      OK
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="modal-footer">
+                  <button className="btn btn-secondary" onClick={onClose}>
+                    Close
+                  </button>
                 </div>
               )}
-
-              <div className="modal-footer">
-                <button className="btn btn-secondary" onClick={onClose}>
-                  Close
-                </button>
-              </div>
             </div>
           )}
         </div>

@@ -14,6 +14,7 @@ export default function ResumeTest() {
   const [submitting, setSubmitting] = useState(false);
   const [questions, setQuestions] = useState(["", "", "", "", ""]);
   const [questionsReady, setQuestionsReady] = useState(false);
+  const [resumeFile, setResumeFile] = useState(null);
   // Analysis removed from the flow; test starts immediately
   const [success, setSuccess] = useState(false);
   const [evalOut, setEvalOut] = useState(null);
@@ -24,6 +25,8 @@ export default function ResumeTest() {
       try {
         const res = await api.get(`/jobs/${id}`);
         setJob(res.data);
+        // Log job details for debugging / visibility when a jobseeker opens the test
+        console.log('Job details loaded for ResumeTest:', res.data);
         
         // Check if user has already applied
         const appRes = await api.get(`/applications/check-application/${id}`);
@@ -40,7 +43,11 @@ export default function ResumeTest() {
           if (me?.resumeFileId) {
             const blob = await downloadMyResume();
             const file = new File([blob], me.resumeFileName || 'resume.pdf', { type: blob.type || 'application/pdf' });
+            // persist resume file so we can attach it when submitting the application
+            setResumeFile(file);
             const qRes = await generateInterviewQuestionsWebhook(file, res.data?.description || '');
+            // Log raw response from n8n for debugging / visibility
+            console.log('n8n - generated interview questions response:', qRes);
             if (Array.isArray(qRes?.questions) && qRes.questions.length > 0) {
               const list = qRes.questions.slice(0,5);
               setQuestions([list[0]||"", list[1]||"", list[2]||"", list[3]||"", list[4]||""]);
@@ -103,18 +110,66 @@ export default function ResumeTest() {
       // Show loading state
       setEvalOut(null);
       setSuccess(false);
+      // Also log the job being applied for
+      console.log('Submitting application for job:', job);
 
       // Evaluate via n8n (expects { history }) and returns { total_score, justification }
       const evalResult = await evaluateInterviewWebhook(history);
-      
+      // Log raw evaluation result from n8n so jobseeker can inspect returned content
+      console.log('n8n - evaluation response:', evalResult);
+
+      const computedScore = typeof evalResult?.total_score === 'number' ? Math.round(evalResult.total_score) : computeScore();
+
       setEvalOut({
-        score: typeof evalResult?.total_score === 'number' ? Math.round(evalResult.total_score) : computeScore(),
+        score: computedScore,
         justification: evalResult?.justification || 'No justification provided.',
       });
+
+      // Ensure an initial application exists (resume analysis) — backend requires this
+      try {
+        const checkRes = await api.get(`/applications/check-application/${id}`);
+        const hasApplied = checkRes.data?.hasApplied;
+        if (!hasApplied) {
+          if (resumeFile) {
+            // create initial application (multipart) with resume
+            const fd = new FormData();
+            fd.append('jobId', id);
+            fd.append('resume', resumeFile);
+            fd.append('coverLetter', '');
+            const initResp = await api.post('/applications/initial', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+            console.log('Initial application created:', initResp.data);
+
+            // If initial application did not reach READY_FOR_TEST, surface message and stop
+            const initStatus = initResp.data?.status;
+            const suggestion = initResp.data?.n8nSuggestions || initResp.data?.n8nSuggestionsList || null;
+            if (initStatus !== 'READY_FOR_TEST') {
+              const msg = `Application status: ${initStatus || 'unknown'}. ${suggestion ? '\nDetails: ' + suggestion : ''}`;
+              alert(msg);
+              return; // do not attempt final apply
+            }
+          } else {
+            // No resume available locally — instruct user to submit resume via profile or analysis modal
+            alert('Please submit your resume first (Profile -> Upload Resume or use Resume Analysis) before applying.');
+            return;
+          }
+        }
+
+        // Now call apply (JSON) to finalize application with test score
+        const appResp = await api.post('/applications', {
+          jobId: id,
+          coverLetter: '',
+          testScore: computedScore,
+        });
+        console.log('Application submit response:', appResp.data);
+      } catch (postErr) {
+        console.error('Failed to submit application to backend:', postErr.response?.data || postErr.message || postErr);
+        // Surface a friendly message but still show evaluation results
+        alert(postErr.response?.data || postErr.message || 'Failed to submit application');
+      }
+
       setSuccess(true);
-      
       // Redirect after a short delay to show the success message
-      setTimeout(() => navigate("/me/applications"), 1500);
+      setTimeout(() => navigate('/me/applications'), 1500);
     } catch (err) {
       const msg = err.response?.data || err.message || "Failed to submit application";
       alert(msg);

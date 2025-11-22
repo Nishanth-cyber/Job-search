@@ -112,9 +112,15 @@ public class JobApplicationService {
 
                     // Enforce company threshold if set
                     Integer threshold = jobModel.getMinN8nScoreForTest();
-                    if (threshold != null && result.getScore() != null && result.getScore() < threshold) {
-                        savedApplication.setStatus("N8N_BELOW_THRESHOLD");
+                    if (threshold != null && result.getScore() != null) {
+                        if (result.getScore() >= threshold) {
+                            savedApplication.setStatus("READY_FOR_TEST");
+                        } else {
+                            savedApplication.setStatus("N8N_BELOW_THRESHOLD");
+                            savedApplication.setN8nSuggestions("Your resume score (" + result.getScore() + ") is below the required threshold (" + threshold + ").");
+                        }
                     } else {
+                        // If no threshold is set, allow to proceed
                         savedApplication.setStatus("READY_FOR_TEST");
                     }
                 } else {
@@ -161,33 +167,16 @@ public class JobApplicationService {
                 throw new RuntimeException("Application is not ready for test. Current status: " + application.getStatus());
             }
             
-            // Get job details to check threshold
-            JobModel job = jobRepository.findById(jobId)
-                .orElseThrow(() -> new RuntimeException("Job not found"));
-                
             // Update application with test results
             application.setTestScore(testScore);
-            
-            // Check if the test score meets or exceeds the threshold
-            Integer threshold = job.getMinN8nScoreForTest();
-            boolean meetsThreshold = (threshold == null) || (testScore != null && testScore >= threshold);
-            
-            // Set status based on threshold check
-            if (meetsThreshold) {
-                application.setPassedTest(true);
-                application.setStatus("PENDING_REVIEW");
-            } else {
-                application.setPassedTest(false);
-                application.setStatus("TEST_BELOW_THRESHOLD");
-            }
+            application.setPassedTest(true);
+            application.setStatus("PENDING_REVIEW");
             
             // Save updated application
             JobApplicationModel savedApplication = jobApplicationRepository.save(application);
             
-            // Only increment application count if the test was passed
-            if (meetsThreshold) {
-                jobService.incrementApplicationCount(jobId);
-            }
+            // Increment application count
+            jobService.incrementApplicationCount(jobId);
             
             return savedApplication;
 

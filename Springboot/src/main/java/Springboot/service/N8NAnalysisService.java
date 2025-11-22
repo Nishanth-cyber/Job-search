@@ -1,20 +1,24 @@
 package Springboot.service;
 
+import java.io.InputStream;
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.concurrent.TimeUnit;
-import java.util.Base64;
-import java.io.InputStream;
-import org.springframework.core.io.ByteArrayResource;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
 public class N8NAnalysisService {
@@ -88,6 +92,12 @@ public class N8NAnalysisService {
 
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 Map<String, Object> responseBody = response.getBody();
+                try {
+                    System.out.println("N8N webhook returned status=" + response.getStatusCode());
+                    System.out.println("N8N webhook response body: " + objectMapper.writeValueAsString(responseBody));
+                } catch (Exception je) {
+                    System.out.println("N8N webhook response (toString): " + responseBody.toString());
+                }
 
                 // Extract fields from N8N response
                 Integer score = null;
@@ -118,7 +128,14 @@ public class N8NAnalysisService {
 
                 return new N8NAnalysisResult(score, suggestions, null, summary, keyStrengths, missingSkills, suggestionsList);
             } else {
-                return new N8NAnalysisResult(null, null, "N8N service returned error: " + response.getStatusCode());
+                try {
+                    String bodyStr = response.getBody() != null ? objectMapper.writeValueAsString(response.getBody()) : "<empty>";
+                    System.err.println("N8N webhook returned non-OK status=" + response.getStatusCode() + ", body=" + bodyStr);
+                    return new N8NAnalysisResult(null, null, "N8N service returned error: " + response.getStatusCode() + " - " + bodyStr);
+                } catch (Exception je) {
+                    System.err.println("N8N webhook returned non-OK status=" + response.getStatusCode());
+                    return new N8NAnalysisResult(null, null, "N8N service returned error: " + response.getStatusCode());
+                }
             }
 
         } catch (Exception e) {
