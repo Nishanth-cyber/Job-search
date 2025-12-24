@@ -1,0 +1,43 @@
+# Build output (will be generated in container)
+target
+*.jar
+*.war
+*.ear
+
+# IDE files
+.idea
+.vscode
+*.iml
+*.ipr
+*.iws
+.classpath
+.project
+.settings
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# Maven wrapper (not needed in container, using maven image)
+.mvn/wrapper/maven-wrapper.jar
+.mvn/wrapper/maven-wrapper.properties
+
+# Logs
+*.log
+
+# Environment files
+.env
+
+# Testing
+.nyc_output
+
+# Misc
+README.md
+
