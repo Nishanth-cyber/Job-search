@@ -340,13 +340,43 @@ Output: `target/*.jar` file
 - Delete `node_modules` and reinstall: `rm -rf node_modules && npm install`
 - Clean Maven: `mvn clean`
 
-## 📝 License
-
-[Specify your license here]
-
 ## 👥 Contributors
 
-[Add contributor information]
+<table>
+  <tr>
+    <td align="center">
+      <img src="https://avatars.githubusercontent.com/u/1?v=4" width="80" style="border-radius:50%"><br>
+      <b>Nishanth S</b><br>
+      Contributor<br>
+      <a href="https://github.com/Nishanth-cyer">GitHub</a>
+    </td>
+  </tr>
+
+   <tr>
+    <td align="center">
+      <img src="https://avatars.githubusercontent.com/u/1?v=4" width="80" style="border-radius:50%"><br>
+      <b>Karthikeyan P</b><br>
+      Contributor<br>
+      <a href="https://github.com/Karthi-Keyan-pnk">GitHub</a>
+    </td>
+  </tr>
+
+  <tr>
+    <td align="center">
+      <img src="https://avatars.githubusercontent.com/u/1?v=4" width="80" style="border-radius:50%"><br>
+      <b>Muthusanjay M</b><br>
+      Contributor<br>
+      <a href="https://github.com/MuthuSanjay">GitHub</a>
+    </td>
+  </tr>
+</table>
+
+## Deployment
+
+[![Live](https://img.shields.io/badge/Live-Render-brightgreen)](https://job-search-8eqe.onrender.com)
+
+🔗 https://job-search-8eqe.onrender.com
+
 
 ## 🙏 Acknowledgments
 
