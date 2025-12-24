@@ -1,0 +1,49 @@
+# Git
+.git
+.gitignore
+
+# Frontend
+React+vite/node_modules
+React+vite/dist
+React+vite/build
+React+vite/.env
+React+vite/.env.local
+React+vite/.env.development
+React+vite/.env.production
+
+# Backend
+Springboot/target
+Springboot/.mvn
+Springboot/.idea
+Springboot/.vscode
+Springboot/*.iml
+
+# Docker
+docker-compose.yml
+Dockerfile
+*.dockerfile
+
+# Documentation
+*.md
+!README.md
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log
+yarn-error.log
+
+# Environment
+.env
+.env.local
+env.template
+

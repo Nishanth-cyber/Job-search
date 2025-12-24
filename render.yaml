@@ -1,0 +1,31 @@
+# Render Blueprint file for easy deployment
+# This file can be imported in Render dashboard for one-click deployment
+
+services:
+  - type: web
+    name: job-search-portal
+    env: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free  # Change to 'starter' or 'standard' for production
+    region: oregon  # Change to your preferred region
+    buildCommand: ""  # Uses Dockerfile
+    startCommand: ""  # Uses Dockerfile CMD
+    envVars:
+      # Required - Set these in Render dashboard environment variables
+      - key: SPRING_DATA_MONGODB_URI
+        sync: false  # Set manually in dashboard
+      - key: SECURITY_JWT_SECRET
+        generateValue: true  # Generate a secure random value
+      - key: SERVER_PORT
+        value: $PORT  # Render sets PORT automatically
+      # Optional - Configure as needed
+      - key: APP_CORS_ALLOWED_ORIGINS
+        value: https://job-search-portal.onrender.com  # Update with your actual URL after deployment
+      - key: ADMIN_SEED_ENABLED
+        value: "true"
+      - key: ADMIN_SEED_EMAIL
+        value: admin@example.com  # Change this
+      - key: ADMIN_SEED_PASSWORD
+        sync: false  # Set a secure password manually
+

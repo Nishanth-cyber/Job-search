@@ -43,10 +43,12 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Always allow preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        // Allow static resources (React frontend files)
+                        .requestMatchers(HttpMethod.GET, "/", "/index.html", "/assets/**", "/*.js", "/*.css", "/*.ico", "/*.png", "/*.jpg", "/*.svg", "/*.woff", "/*.woff2", "/*.ttf", "/*.eot").permitAll()
                         .requestMatchers("/auth/**").permitAll()
-                        // Public reads for jobs
+                        // Public reads for jobs (API endpoints)
                         .requestMatchers(HttpMethod.GET, "/jobs", "/jobs/search", "/jobs/*", "/jobs/**").permitAll()
-                        // Public reads for challenges
+                        // Public reads for challenges (API endpoints)
                         .requestMatchers(HttpMethod.GET, "/challenges", "/challenges/*", "/challenges/**").permitAll()
                         // Public company logo fetch
                         .requestMatchers(HttpMethod.GET, "/companies/**").permitAll()
@@ -70,6 +72,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/challenges/*/submit").hasRole("JOBSEEKER")
                         .requestMatchers("/applications/me").hasRole("JOBSEEKER")
                         .requestMatchers("/applications/**").authenticated()
+                        // Allow React Router client-side routes (GET requests to non-API paths)
+                        // These will be served index.html by ReactRouterController
+                        .requestMatchers(HttpMethod.GET, "/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(ex -> ex
